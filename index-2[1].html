@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="description" content="ABC-Scheduler - Anniversary Birthday Calendar Scheduler" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>ABC-Scheduler</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎂</text></svg>" />
+  <style>
+    :root {
+      --bg-dark: #0f0f1a;
+      --glass: rgba(255, 255, 255, 0.12);
+      --glass-border: rgba(255, 255, 255, 0.18);
+      --text: #f0f0f5;
+      --text-muted: #a0a0b8;
+      --accent-pink: #ff6b9d;
+      --accent-blue: #6bc5ff;
+      --accent-purple: #b388ff;
+      --accent-gold: #ffd56b;
+      --accent-green: #6bffb8;
+      --danger: #ff6b6b;
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+      --radius: 18px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 40%, #16213e 100%);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding-bottom: 40px;
+    }
+
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.35;
+      z-index: 0;
+      pointer-events: none;
+    }
+    body::before { width: 420px; height: 420px; background: var(--accent-purple); top: -120px; left: -100px; }
+    body::after  { width: 360px; height: 360px; background: var(--accent-pink); bottom: -80px; right: -80px; }
+
+    .app { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 16px; }
+
+    header { text-align: center; padding: 20px 0 12px; }
+    header h1 {
+      font-size: 1.7rem; font-weight: 700;
+      background: linear-gradient(90deg, var(--accent-pink), var(--accent-blue), var(--accent-purple));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    header p { color: var(--text-muted); font-size: 0.85rem; margin-top: 4px; }
+
+    .glass {
+      background: var(--glass);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    /* Month navigation */
+    .month-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px; margin-bottom: 14px;
+    }
+    .month-nav h2 { font-size: 1.25rem; font-weight: 600; }
+    .nav-btn {
+      width: 42px; height: 42px; border: none; border-radius: 50%;
+      background: rgba(255,255,255,0.1); color: var(--text); font-size: 1.3rem;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.25s ease; border: 1px solid var(--glass-border);
+    }
+    .nav-btn:hover, .nav-btn:active { background: rgba(255,255,255,0.22); transform: scale(1.08); }
+
+    /* Calendar */
+    .calendar { padding: 12px; margin-bottom: 16px; }
+    .weekdays {
+      display: grid; grid-template-columns: repeat(7, 1fr); text-align: center;
+      font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 600;
+    }
+    .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .day {
+      aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      border-radius: 12px; font-size: 0.9rem; cursor: pointer; position: relative;
+      transition: all 0.2s ease; border: 1px solid transparent;
+    }
+    .day:hover { background: rgba(255,255,255,0.1); }
+    .day.other-month { opacity: 0.3; }
+    .day.today {
+      background: linear-gradient(135deg, rgba(107,197,255,0.35), rgba(179,136,255,0.35));
+      border-color: var(--accent-blue); font-weight: 700;
+    }
+    .day.has-event::after {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent-pink); position: absolute; bottom: 4px;
+    }
+    .day.has-birthday::after { background: var(--accent-gold); }
+    .day.has-anniversary::after { background: var(--accent-pink); }
+    .day.has-both::after { background: linear-gradient(90deg, var(--accent-gold), var(--accent-pink)); }
+    .day.selected { background: rgba(255,255,255,0.2); border-color: white; }
+
+    /* Buttons */
+    .add-btn {
+      width: 100%; padding: 16px; border: none; border-radius: var(--radius);
+      background: linear-gradient(135deg, rgba(255,107,157,0.7), rgba(179,136,255,0.7));
+      color: white; font-size: 1.05rem; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      margin-bottom: 12px; box-shadow: 0 6px 20px rgba(255,107,157,0.3);
+      transition: all 0.25s ease; border: 1px solid rgba(255,255,255,0.25);
+    }
+    .add-btn:hover, .add-btn:active { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(255,107,157,0.45); }
+
+    .test-btn {
+      width: 100%; padding: 12px; border: none; border-radius: 14px;
+      background: rgba(107, 197, 255, 0.2); color: var(--accent-blue);
+      font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      margin-bottom: 16px; border: 1px solid rgba(107,197,255,0.35);
+      transition: all 0.25s;
+    }
+    .test-btn:hover { background: rgba(107,197,255,0.35); }
+
+    /* Upcoming */
+    .upcoming { padding: 16px; margin-bottom: 16px; }
+    .upcoming h3 { font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .event-list { display: flex; flex-direction: column; gap: 10px; }
+    .event-item {
+      display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+      background: rgba(255,255,255,0.06); border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.1); transition: background 0.2s;
+    }
+    .event-item:hover { background: rgba(255,255,255,0.1); }
+    .event-icon {
+      width: 42px; height: 42px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;
+    }
+    .event-icon.birthday { background: linear-gradient(135deg, rgba(255,213,107,0.3), rgba(255,180,50,0.3)); }
+    .event-icon.anniversary { background: linear-gradient(135deg, rgba(255,107,157,0.3), rgba(255,80,120,0.3)); }
+    .event-info { flex: 1; min-width: 0; }
+    .event-info .name { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .event-info .meta { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+    .event-days { font-size: 0.8rem; font-weight: 600; color: var(--accent-blue); white-space: nowrap; }
+    .event-actions { display: flex; gap: 6px; }
+    .icon-btn {
+      width: 32px; height: 32px; border: none; border-radius: 8px;
+      background: rgba(255,255,255,0.08); color: var(--text-muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 0.9rem; transition: all 0.2s;
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.15); color: var(--text); }
+    .icon-btn.delete:hover { background: rgba(255,107,107,0.25); color: var(--danger); }
+
+    .empty-state { text-align: center; padding: 24px 12px; color: var(--text-muted); font-size: 0.9rem; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(6px);
+      z-index: 100; display: flex; align-items: flex-end; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .modal {
+      width: 100%; max-width: 480px;
+      background: linear-gradient(180deg, #1e1e32 0%, #16162a 100%);
+      border-radius: 24px 24px 0 0; padding: 24px 20px 32px;
+      border: 1px solid var(--glass-border); border-bottom: none;
+      transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-header h3 { font-size: 1.2rem; }
+    .close-btn {
+      width: 36px; height: 36px; border: none; border-radius: 50%;
+      background: rgba(255,255,255,0.1); color: var(--text); font-size: 1.2rem; cursor: pointer;
+    }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 500; }
+    .form-group input, .form-group select {
+      width: 100%; padding: 13px 14px; border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.07);
+      color: var(--text); font-size: 1rem; outline: none; transition: border-color 0.2s;
+    }
+    .form-group input:focus, .form-group select:focus { border-color: var(--accent-blue); }
+    .form-group select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23a0a0b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px;
+    }
+
+    .type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .type-btn {
+      padding: 14px; border-radius: 14px; border: 2px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.05); color: var(--text-muted); font-size: 0.95rem;
+      font-weight: 600; cursor: pointer; transition: all 0.25s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .type-btn.active.birthday { border-color: var(--accent-gold); background: rgba(255,213,107,0.15); color: var(--accent-gold); }
+    .type-btn.active.anniversary { border-color: var(--accent-pink); background: rgba(255,107,157,0.15); color: var(--accent-pink); }
+
+    .save-btn {
+      width: 100%; padding: 16px; border: none; border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      color: white; font-size: 1.05rem; font-weight: 600; cursor: pointer; margin-top: 8px;
+      box-shadow: 0 6px 20px rgba(107,197,255,0.3); transition: all 0.25s;
+    }
+    .save-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(107,197,255,0.4); }
+
+    .day-detail { padding: 14px; margin-bottom: 16px; display: none; }
+    .day-detail.visible { display: block; }
+    .day-detail h4 { font-size: 0.95rem; margin-bottom: 10px; color: var(--text-muted); }
+
+    .toast {
+      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
+      background: rgba(30,30,50,0.95); color: white; padding: 12px 24px; border-radius: 30px;
+      font-size: 0.9rem; z-index: 200; opacity: 0; transition: all 0.35s ease;
+      border: 1px solid var(--glass-border); backdrop-filter: blur(10px); white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    .notif-banner {
+      padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 12px; font-size: 0.85rem;
+    }
+    .notif-banner button {
+      margin-left: auto; padding: 8px 14px; border: none; border-radius: 10px;
+      background: var(--accent-blue); color: white; font-weight: 600; font-size: 0.8rem; cursor: pointer; white-space: nowrap;
+    }
+
+    .settings-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; margin-bottom: 10px; font-size: 0.9rem;
+    }
+    .toggle {
+      width: 48px; height: 28px; border-radius: 14px; background: rgba(255,255,255,0.15);
+      position: relative; cursor: pointer; transition: background 0.25s;
+    }
+    .toggle.on { background: var(--accent-green); }
+    .toggle::after {
+      content: ''; width: 22px; height: 22px; border-radius: 50%; background: white;
+      position: absolute; top: 3px; left: 3px; transition: transform 0.25s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .toggle.on::after { transform: translateX(20px); }
+
+    .status-line {
+      font-size: 0.78rem; color: var(--text-muted); text-align: center;
+      margin-bottom: 14px; padding: 0 8px;
+    }
+    .status-line strong { color: var(--accent-green); }
+
+    .footer-note {
+      text-align: center; font-size: 0.75rem; color: var(--text-muted); opacity: 0.7; margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>ABC-Scheduler</h1>
+      <p>Anniversary · Birthday · Calendar</p>
+    </header>
+
+    <div id="notifBanner" class="glass notif-banner" style="display:none;">
+      <span>🔔 Enable notifications for 7:00 AM alerts</span>
+      <button onclick="requestNotificationPermission()">Enable</button>
+    </div>
+
+    <div class="glass settings-row">
+      <span>Morning alerts (07:00)</span>
+      <div id="alertToggle" class="toggle on" onclick="toggleAlerts()"></div>
+    </div>
+
+    <div id="statusLine" class="status-line">Checking notification status…</div>
+
+    <div class="glass month-nav">
+      <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
+      <h2 id="monthTitle">August 2026</h2>
+      <button class="nav-btn" onclick="changeMonth(1)">›</button>
+    </div>
+
+    <div class="glass calendar">
+      <div class="weekdays">
+        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+      </div>
+      <div class="days" id="calendarDays"></div>
+    </div>
+
+    <div id="dayDetail" class="glass day-detail">
+      <h4 id="dayDetailTitle">Events on this day</h4>
+      <div id="dayDetailList" class="event-list"></div>
+    </div>
+
+    <button class="add-btn" onclick="openAddModal()">
+      <span style="font-size:1.3rem">+</span> Add Anniversary / Birthday
+    </button>
+
+    <button class="test-btn" onclick="testAlert()">🔔 Test Morning Alert (sound + notification)</button>
+
+    <div class="glass upcoming">
+      <h3>📅 Upcoming Events</h3>
+      <div id="upcomingList" class="event-list">
+        <div class="empty-state">No upcoming events yet.<br>Add your first one!</div>
+      </div>
+    </div>
+
+    <p class="footer-note">
+      Data saved on your device · Alerts fire at 07:00<br>
+      Keep the app open or add to Home Screen for best results
+    </p>
+  </div>
+
+  <!-- Add / Edit Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Add Event</h3>
+        <button class="close-btn" onclick="closeModal()">×</button>
+      </div>
+
+      <div class="form-group">
+        <label>Event Type</label>
+        <div class="type-toggle">
+          <button type="button" class="type-btn birthday active" data-type="birthday" onclick="selectType(this)">🎂 Birthday</button>
+          <button type="button" class="type-btn anniversary" data-type="anniversary" onclick="selectType(this)">💍 Anniversary</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="eventName">Name / Title</label>
+        <input type="text" id="eventName" placeholder="e.g. Mom, Wedding, John & Sarah" maxlength="60" />
+      </div>
+
+      <div class="form-group">
+        <label for="eventDate">Date</label>
+        <input type="date" id="eventDate" />
+      </div>
+
+      <div class="form-group">
+        <label for="alertTone">Alert Tone</label>
+        <select id="alertTone">
+          <option value="default">Default Chime</option>
+          <option value="soft">Soft Bell</option>
+          <option value="bright">Bright Sparkle</option>
+          <option value="warm">Warm Melody</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="eventNote">Note (optional)</label>
+        <input type="text" id="eventNote" placeholder="e.g. Buy cake, Call at 9am" maxlength="100" />
+      </div>
+
+      <button class="save-btn" onclick="saveEvent()">💾 Save Event</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ===================== STATE =====================
+    let events = [];
+    let currentDate = new Date();
+    let selectedDay = null;
+    let editingId = null;
+    let selectedType = 'birthday';
+    let alertsEnabled = true;
+    let morningTimeout = null;
+    let audioCtx = null;
+    let swRegistration = null;
+
+    // ===================== INIT =====================
+    document.addEventListener('DOMContentLoaded', async () => {
+      loadEvents();
+      loadSettings();
+      renderCalendar();
+      renderUpcoming();
+      await registerServiceWorker();
+      checkNotificationPermission();
+      updateStatusLine();
+      // Main scheduling logic
+      checkAndNotifyToday();
+      scheduleNextMorningAlert();
+
+      // Re-check when user comes back to the tab
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          checkAndNotifyToday();
+          scheduleNextMorningAlert();
+        }
+      });
+
+      // Also check every 30 seconds while the page is open
+      setInterval(() => {
+        checkAndNotifyToday();
+      }, 30000);
+    });
+
+    // ===================== SERVICE WORKER =====================
+    async function registerServiceWorker() {
+      if (!('serviceWorker' in navigator)) return;
+      try {
+        swRegistration = await navigator.serviceWorker.register('./sw.js');
+        console.log('Service Worker registered');
+      } catch (err) {
+        console.warn('SW registration failed:', err);
+      }
+    }
+
+    // ===================== STORAGE =====================
+    function loadEvents() {
+      try {
+        const raw = localStorage.getItem('abc_events');
+        events = raw ? JSON.parse(raw) : [];
+      } catch (e) { events = []; }
+    }
+
+    function saveEvents() {
+      localStorage.setItem('abc_events', JSON.stringify(events));
+    }
+
+    function loadSettings() {
+      const a = localStorage.getItem('abc_alerts');
+      alertsEnabled = a === null ? true : a === 'true';
+      document.getElementById('alertToggle').classList.toggle('on', alertsEnabled);
+    }
+
+    function toggleAlerts() {
+      alertsEnabled = !alertsEnabled;
+      localStorage.setItem('abc_alerts', alertsEnabled);
+      document.getElementById('alertToggle').classList.toggle('on', alertsEnabled);
+      if (alertsEnabled) {
+        scheduleNextMorningAlert();
+        showToast('Morning alerts enabled');
+      } else {
+        if (morningTimeout) clearTimeout(morningTimeout);
+        showToast('Morning alerts disabled');
+      }
+      updateStatusLine();
+    }
+
+    function getLastNotifiedDate() {
+      return localStorage.getItem('abc_last_notified') || '';
+    }
+
+    function setLastNotifiedDate(dateStr) {
+      localStorage.setItem('abc_last_notified', dateStr);
+    }
+
+    // ===================== CALENDAR =====================
+    function renderCalendar() {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      document.getElementById('monthTitle').textContent = `${monthNames[month]} ${year}`;
+
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const daysInPrev = new Date(year, month, 0).getDate();
+
+      const container = document.getElementById('calendarDays');
+      container.innerHTML = '';
+
+      for (let i = firstDay - 1; i >= 0; i--) {
+        container.appendChild(createDayEl(daysInPrev - i, true, year, month - 1));
+      }
+
+      const today = new Date();
+      for (let d = 1; d <= daysInMonth; d++) {
+        const el = createDayEl(d, false, year, month);
+        if (d === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+          el.classList.add('today');
+        }
+        if (selectedDay && selectedDay.day === d && selectedDay.month === month && selectedDay.year === year) {
+          el.classList.add('selected');
+        }
+        container.appendChild(el);
+      }
+
+      const totalCells = container.children.length;
+      const remaining = 42 - totalCells;
+      for (let d = 1; d <= remaining; d++) {
+        container.appendChild(createDayEl(d, true, year, month + 1));
+      }
+    }
+
+    function createDayEl(day, other, year, month) {
+      const el = document.createElement('div');
+      el.className = 'day' + (other ? ' other-month' : '');
+      el.textContent = day;
+
+      let m = month, y = year;
+      if (m < 0) { m = 11; y--; }
+      if (m > 11) { m = 0; y++; }
+
+      const dayEvents = getEventsForDate(day, m, y);
+      if (dayEvents.length > 0) {
+        const hasB = dayEvents.some(e => e.type === 'birthday');
+        const hasA = dayEvents.some(e => e.type === 'anniversary');
+        if (hasB && hasA) el.classList.add('has-both');
+        else if (hasB) el.classList.add('has-birthday');
+        else el.classList.add('has-anniversary');
+        el.classList.add('has-event');
+      }
+
+      el.addEventListener('click', () => {
+        if (other) return;
+        selectedDay = { day, month: m, year: y };
+        renderCalendar();
+        showDayDetail(day, m, y);
+      });
+      return el;
+    }
+
+    function changeMonth(delta) {
+      currentDate.setMonth(currentDate.getMonth() + delta);
+      selectedDay = null;
+      document.getElementById('dayDetail').classList.remove('visible');
+      renderCalendar();
+    }
+
+    function getEventsForDate(day, month, year) {
+      return events.filter(e => {
+        const d = new Date(e.date);
+        return d.getDate() === day && d.getMonth() === month;
+      });
+    }
+
+    function showDayDetail(day, month, year) {
+      const list = getEventsForDate(day, month, year);
+      const panel = document.getElementById('dayDetail');
+      const title = document.getElementById('dayDetailTitle');
+      const container = document.getElementById('dayDetailList');
+      const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      title.textContent = `Events on ${monthNames[month]} ${day}`;
+
+      if (list.length === 0) {
+        container.innerHTML = '<div class="empty-state">No events on this day</div>';
+      } else {
+        container.innerHTML = list.map(e => eventItemHTML(e)).join('');
+      }
+      panel.classList.add('visible');
+    }
+
+    // ===================== UPCOMING =====================
+    function getNextOccurrence(eventDateStr) {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const d = new Date(eventDateStr);
+      let next = new Date(now.getFullYear(), d.getMonth(), d.getDate());
+      if (next < now) next = new Date(now.getFullYear() + 1, d.getMonth(), d.getDate());
+      return next;
+    }
+
+    function daysUntil(date) {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      return Math.round((date - now) / 86400000);
+    }
+
+    function renderUpcoming() {
+      const container = document.getElementById('upcomingList');
+      if (events.length === 0) {
+        container.innerHTML = '<div class="empty-state">No upcoming events yet.<br>Add your first one!</div>';
+        return;
+      }
+      const withNext = events.map(e => ({
+        ...e,
+        next: getNextOccurrence(e.date),
+        days: daysUntil(getNextOccurrence(e.date))
+      }));
+      withNext.sort((a, b) => a.next - b.next);
+      container.innerHTML = withNext.slice(0, 5).map(e => eventItemHTML(e)).join('');
+    }
+
+    function eventItemHTML(e) {
+      const icon = e.type === 'birthday' ? '🎂' : '💍';
+      const next = e.next || getNextOccurrence(e.date);
+      const days = e.days !== undefined ? e.days : daysUntil(next);
+      const daysText = days === 0 ? 'Today!' : days === 1 ? 'Tomorrow' : `${days} days`;
+      const dateStr = next.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+      return `
+        <div class="event-item">
+          <div class="event-icon ${e.type}">${icon}</div>
+          <div class="event-info">
+            <div class="name">${escapeHtml(e.name)}</div>
+            <div class="meta">${e.type === 'birthday' ? 'Birthday' : 'Anniversary'} · ${dateStr}${e.note ? ' · ' + escapeHtml(e.note) : ''}</div>
+          </div>
+          <div class="event-days">${daysText}</div>
+          <div class="event-actions">
+            <button class="icon-btn" onclick="editEvent('${e.id}')" title="Edit">✏️</button>
+            <button class="icon-btn delete" onclick="deleteEvent('${e.id}')" title="Delete">🗑️</button>
+          </div>
+        </div>`;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ===================== MODAL =====================
+    function openAddModal() {
+      editingId = null;
+      document.getElementById('modalTitle').textContent = 'Add Event';
+      document.getElementById('eventName').value = '';
+      document.getElementById('eventNote').value = '';
+      document.getElementById('alertTone').value = 'default';
+      selectType(document.querySelector('.type-btn.birthday'));
+
+      if (selectedDay) {
+        const m = String(selectedDay.month + 1).padStart(2, '0');
+        const d = String(selectedDay.day).padStart(2, '0');
+        document.getElementById('eventDate').value = `${selectedDay.year}-${m}-${d}`;
+      } else {
+        document.getElementById('eventDate').value = new Date().toISOString().slice(0, 10);
+      }
+      document.getElementById('modalOverlay').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.remove('open');
+    }
+
+    function selectType(btn) {
+      document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedType = btn.dataset.type;
+    }
+
+    function saveEvent() {
+      const name = document.getElementById('eventName').value.trim();
+      const date = document.getElementById('eventDate').value;
+      const tone = document.getElementById('alertTone').value;
+      const note = document.getElementById('eventNote').value.trim();
+
+      if (!name) { showToast('Please enter a name'); return; }
+      if (!date) { showToast('Please select a date'); return; }
+
+      if (editingId) {
+        const idx = events.findIndex(e => e.id === editingId);
+        if (idx !== -1) {
+          events[idx] = { ...events[idx], name, date, type: selectedType, tone, note };
+        }
+        showToast('Event updated ✨');
+      } else {
+        events.push({
+          id: 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+          name, date, type: selectedType, tone, note,
+          created: new Date().toISOString()
+        });
+        showToast('Event saved 🎉');
+      }
+
+      saveEvents();
+      closeModal();
+      renderCalendar();
+      renderUpcoming();
+      if (selectedDay) showDayDetail(selectedDay.day, selectedDay.month, selectedDay.year);
+      // Re-schedule in case the new event is today
+      checkAndNotifyToday();
+      scheduleNextMorningAlert();
+    }
+
+    function editEvent(id) {
+      const e = events.find(ev => ev.id === id);
+      if (!e) return;
+      editingId = id;
+      document.getElementById('modalTitle').textContent = 'Edit Event';
+      document.getElementById('eventName').value = e.name;
+      document.getElementById('eventDate').value = e.date;
+      document.getElementById('alertTone').value = e.tone || 'default';
+      document.getElementById('eventNote').value = e.note || '';
+      const typeBtn = document.querySelector(`.type-btn[data-type="${e.type}"]`);
+      if (typeBtn) selectType(typeBtn);
+      document.getElementById('modalOverlay').classList.add('open');
+    }
+
+    function deleteEvent(id) {
+      if (!confirm('Delete this event?')) return;
+      events = events.filter(e => e.id !== id);
+      saveEvents();
+      renderCalendar();
+      renderUpcoming();
+      if (selectedDay) showDayDetail(selectedDay.day, selectedDay.month, selectedDay.year);
+      scheduleNextMorningAlert();
+      showToast('Event deleted');
+    }
+
+    // ===================== NOTIFICATIONS & ALARM =====================
+    function checkNotificationPermission() {
+      if (!('Notification' in window)) {
+        updateStatusLine();
+        return;
+      }
+      if (Notification.permission === 'default') {
+        document.getElementById('notifBanner').style.display = 'flex';
+      } else {
+        document.getElementById('notifBanner').style.display = 'none';
+      }
+      updateStatusLine();
+    }
+
+    function requestNotificationPermission() {
+      if (!('Notification' in window)) {
+        showToast('Notifications not supported');
+        return;
+      }
+      Notification.requestPermission().then(perm => {
+        document.getElementById('notifBanner').style.display = 'none';
+        if (perm === 'granted') {
+          showToast('Notifications enabled 🔔');
+          // Unlock audio on this user gesture
+          ensureAudioContext();
+          checkAndNotifyToday();
+          scheduleNextMorningAlert();
+        } else {
+          showToast('Permission denied – alerts will only play sound when app is open');
+        }
+        updateStatusLine();
+      });
+    }
+
+    function updateStatusLine() {
+      const el = document.getElementById('statusLine');
+      if (!alertsEnabled) {
+        el.innerHTML = 'Morning alerts are <strong style="color:var(--danger)">OFF</strong>';
+        return;
+      }
+      const perm = ('Notification' in window) ? Notification.permission : 'unsupported';
+      if (perm === 'granted') {
+        const next = getNext7AM();
+        const mins = Math.round((next - new Date()) / 60000);
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        el.innerHTML = `✅ Alerts ON · Next check at <strong>07:00</strong> (in ${h}h ${m}m)`;
+      } else if (perm === 'denied') {
+        el.innerHTML = '⚠️ Notification permission denied · Sound will still play if app is open';
+      } else {
+        el.innerHTML = '👆 Tap <strong>Enable</strong> above to allow notifications';
+      }
+    }
+
+    function getTodayEvents() {
+      const now = new Date();
+      return events.filter(e => {
+        const d = new Date(e.date);
+        return d.getDate() === now.getDate() && d.getMonth() === now.getMonth();
+      });
+    }
+
+    function getTodayKey() {
+      const n = new Date();
+      return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+    }
+
+    // Called frequently – decides whether to fire today's alerts
+    function checkAndNotifyToday() {
+      if (!alertsEnabled) return;
+
+      const todayEvents = getTodayEvents();
+      if (todayEvents.length === 0) return;
+
+      const now = new Date();
+      const todayKey = getTodayKey();
+      const lastNotified = getLastNotifiedDate();
+
+      // Already notified today?
+      if (lastNotified === todayKey) return;
+
+      // Only fire at or after 07:00
+      if (now.getHours() < 7) return;
+
+      // Fire!
+      fireAlerts(todayEvents);
+      setLastNotifiedDate(todayKey);
+    }
+
+    function getNext7AM() {
+      const now = new Date();
+      const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 7, 0, 0, 0);
+      if (next <= now) {
+        next.setDate(next.getDate() + 1);
+      }
+      return next;
+    }
+
+    function scheduleNextMorningAlert() {
+      if (morningTimeout) clearTimeout(morningTimeout);
+      if (!alertsEnabled) return;
+
+      const next = getNext7AM();
+      const delay = next - new Date();
+
+      morningTimeout = setTimeout(() => {
+        // At exactly ~07:00
+        checkAndNotifyToday();
+        // Schedule the day after
+        scheduleNextMorningAlert();
+      }, delay);
+
+      updateStatusLine();
+      console.log('Next morning alert scheduled in', Math.round(delay / 60000), 'minutes');
+    }
+
+    function fireAlerts(eventList) {
+      eventList.forEach((e, index) => {
+        // Stagger slightly so multiple notifications don't collide
+        setTimeout(() => {
+          showNotification(e);
+          playTone(e.tone || 'default');
+        }, index * 800);
+      });
+    }
+
+    function showNotification(event) {
+      const title = event.type === 'birthday' ? '🎂 Birthday Today!' : '💍 Anniversary Today!';
+      const body = `${event.name}${event.note ? ' – ' + event.note : ''}`;
+      const icon = event.type === 'birthday'
+        ? "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎂</text></svg>"
+        : "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💍</text></svg>";
+
+      // Prefer Service Worker notification (works better in background)
+      if (swRegistration && swRegistration.active && Notification.permission === 'granted') {
+        swRegistration.active.postMessage({
+          type: 'SHOW_NOTIFICATION',
+          title, body, tag: 'abc-' + event.id, icon
+        });
+      } else if (Notification.permission === 'granted') {
+        // Fallback to regular Notification
+        try {
+          const n = new Notification(title, {
+            body, icon, tag: 'abc-' + event.id, requireInteraction: true
+          });
+          n.onclick = () => { window.focus(); n.close(); };
+        } catch (err) {
+          console.warn('Notification failed', err);
+        }
+      }
+    }
+
+    // ===================== SOUND =====================
+    function ensureAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function playTone(type) {
+      try {
+        const ctx = ensureAudioContext();
+        const now = ctx.currentTime;
+
+        const notes = {
+          default: [523.25, 659.25, 783.99],
+          soft:    [392.00, 493.88, 587.33],
+          bright:  [659.25, 830.61, 1046.50],
+          warm:    [349.23, 440.00, 523.25]
+        };
+        const freqs = notes[type] || notes.default;
+
+        freqs.forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0, now + i * 0.18);
+          gain.gain.linearRampToValueAtTime(0.28, now + i * 0.18 + 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.18 + 0.45);
+          osc.start(now + i * 0.18);
+          osc.stop(now + i * 0.18 + 0.5);
+        });
+      } catch (e) {
+        console.warn('Audio play failed', e);
+      }
+    }
+
+    // ===================== TEST BUTTON =====================
+    function testAlert() {
+      // Unlock audio on this click
+      ensureAudioContext();
+
+      const sample = {
+        id: 'test',
+        name: 'Test Person',
+        type: 'birthday',
+        tone: document.getElementById('alertTone') ? document.getElementById('alertTone').value : 'default',
+        note: 'This is a test alert'
+      };
+
+      if (Notification.permission === 'granted') {
+        showNotification(sample);
+        playTone(sample.tone);
+        showToast('Test notification + sound sent 🔔');
+      } else if (Notification.permission === 'default') {
+        requestNotificationPermission().then?.(() => {
+          // after permission the test can be run again
+        });
+        // Still play sound
+        playTone(sample.tone);
+        showToast('Sound played · Please allow notifications and test again');
+      } else {
+        // Permission denied – still play the alarm sound
+        playTone(sample.tone);
+        showToast('Sound played (notifications blocked by browser)');
+      }
+    }
+
+    // ===================== TOAST =====================
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2800);
+    }
+
+    // Close modal on overlay click
+    document.getElementById('modalOverlay').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+  </script>
+</body>
+</html>
