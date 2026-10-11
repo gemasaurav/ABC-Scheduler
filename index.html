@@ -8,7 +8,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <title>ABC-Scheduler</title>
-  <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎂</text></svg>" />
   <style>
     :root {
@@ -35,7 +34,7 @@
       color: var(--text);
       min-height: 100vh;
       overflow-x: hidden;
-      padding-bottom: 40px;
+      padding-bottom: 60px;
     }
 
     body::before, body::after {
@@ -68,7 +67,6 @@
       box-shadow: var(--shadow);
     }
 
-    /* Month navigation */
     .month-nav {
       display: flex; align-items: center; justify-content: space-between;
       padding: 14px 18px; margin-bottom: 14px;
@@ -82,7 +80,6 @@
     }
     .nav-btn:hover, .nav-btn:active { background: rgba(255,255,255,0.22); transform: scale(1.08); }
 
-    /* Calendar */
     .calendar { padding: 12px; margin-bottom: 16px; }
     .weekdays {
       display: grid; grid-template-columns: repeat(7, 1fr); text-align: center;
@@ -109,7 +106,6 @@
     .day.has-both::after { background: linear-gradient(90deg, var(--accent-gold), var(--accent-pink)); }
     .day.selected { background: rgba(255,255,255,0.2); border-color: white; }
 
-    /* Buttons */
     .add-btn {
       width: 100%; padding: 16px; border: none; border-radius: var(--radius);
       background: linear-gradient(135deg, rgba(255,107,157,0.7), rgba(179,136,255,0.7));
@@ -129,7 +125,6 @@
     }
     .test-btn:hover { background: rgba(107,197,255,0.35); }
 
-    /* Upcoming */
     .upcoming { padding: 16px; margin-bottom: 16px; }
     .upcoming h3 { font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
     .event-list { display: flex; flex-direction: column; gap: 10px; }
@@ -160,7 +155,7 @@
 
     .empty-state { text-align: center; padding: 24px 12px; color: var(--text-muted); font-size: 0.9rem; }
 
-    /* Modal */
+    /* Modal (add/edit) */
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(6px);
       z-index: 100; display: flex; align-items: flex-end; justify-content: center;
@@ -220,7 +215,7 @@
     .day-detail h4 { font-size: 0.95rem; margin-bottom: 10px; color: var(--text-muted); }
 
     .toast {
-      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(100px);
       background: rgba(30,30,50,0.95); color: white; padding: 12px 24px; border-radius: 30px;
       font-size: 0.9rem; z-index: 200; opacity: 0; transition: all 0.35s ease;
       border: 1px solid var(--glass-border); backdrop-filter: blur(10px); white-space: nowrap;
@@ -257,8 +252,88 @@
     }
     .status-line strong { color: var(--accent-green); }
 
+    /* ===== FULL-SCREEN ALERT OVERLAY (07:00) ===== */
+    .alert-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(8, 8, 20, 0.92);
+      backdrop-filter: blur(12px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+      padding: 20px;
+    }
+    .alert-overlay.show {
+      opacity: 1; pointer-events: auto;
+    }
+    .alert-card {
+      width: 100%; max-width: 380px;
+      background: linear-gradient(160deg, #2a1a3e 0%, #1a1a2e 50%, #16213e 100%);
+      border-radius: 28px;
+      border: 1px solid rgba(255,107,157,0.4);
+      box-shadow: 0 0 60px rgba(255,107,157,0.35), 0 20px 50px rgba(0,0,0,0.5);
+      padding: 32px 24px 28px;
+      text-align: center;
+      animation: alertPulse 1.5s ease-in-out infinite;
+    }
+    @keyframes alertPulse {
+      0%, 100% { box-shadow: 0 0 40px rgba(255,107,157,0.3), 0 20px 50px rgba(0,0,0,0.5); }
+      50% { box-shadow: 0 0 70px rgba(255,107,157,0.55), 0 20px 50px rgba(0,0,0,0.5); }
+    }
+    .alert-icon {
+      font-size: 4rem;
+      margin-bottom: 12px;
+      animation: ringShake 0.6s ease-in-out infinite;
+    }
+    @keyframes ringShake {
+      0%, 100% { transform: rotate(-8deg); }
+      50% { transform: rotate(8deg); }
+    }
+    .alert-title {
+      font-size: 1.5rem; font-weight: 700; margin-bottom: 6px;
+      background: linear-gradient(90deg, var(--accent-gold), var(--accent-pink));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .alert-subtitle {
+      font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;
+    }
+    .alert-events {
+      display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;
+    }
+    .alert-event-item {
+      background: rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 14px 16px;
+      border: 1px solid rgba(255,255,255,0.12);
+      text-align: left;
+    }
+    .alert-event-item .ae-name { font-weight: 700; font-size: 1.1rem; }
+    .alert-event-item .ae-type { font-size: 0.85rem; color: var(--text-muted); margin-top: 2px; }
+    .alert-event-item .ae-note { font-size: 0.82rem; color: var(--accent-blue); margin-top: 4px; }
+
+    .alert-dismiss {
+      width: 100%; padding: 16px; border: none; border-radius: 16px;
+      background: linear-gradient(135deg, var(--accent-pink), var(--accent-purple));
+      color: white; font-size: 1.1rem; font-weight: 700; cursor: pointer;
+      box-shadow: 0 8px 24px rgba(255,107,157,0.4);
+      transition: transform 0.2s;
+    }
+    .alert-dismiss:active { transform: scale(0.97); }
+
+    /* Credit footer */
+    .credit {
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      opacity: 0.75;
+      padding: 18px 12px 10px;
+      letter-spacing: 0.3px;
+    }
+    .credit strong {
+      color: var(--accent-gold);
+      font-weight: 600;
+    }
+
     .footer-note {
-      text-align: center; font-size: 0.75rem; color: var(--text-muted); opacity: 0.7; margin-top: 8px;
+      text-align: center; font-size: 0.72rem; color: var(--text-muted); opacity: 0.6; margin-top: 4px;
     }
   </style>
 </head>
@@ -283,7 +358,7 @@
 
     <div class="glass month-nav">
       <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
-      <h2 id="monthTitle">August 2026</h2>
+      <h2 id="monthTitle">October 2026</h2>
       <button class="nav-btn" onclick="changeMonth(1)">›</button>
     </div>
 
@@ -303,7 +378,7 @@
       <span style="font-size:1.3rem">+</span> Add Anniversary / Birthday
     </button>
 
-    <button class="test-btn" onclick="testAlert()">🔔 Test Morning Alert (sound + notification)</button>
+    <button class="test-btn" onclick="testAlert()">🔔 Test Morning Alert (on-screen + ring)</button>
 
     <div class="glass upcoming">
       <h3>📅 Upcoming Events</h3>
@@ -314,8 +389,12 @@
 
     <p class="footer-note">
       Data saved on your device · Alerts fire at 07:00<br>
-      Keep the app open or add to Home Screen for best results
+      Keep the tab open (or open the app in the morning) for best results
     </p>
+
+    <div class="credit">
+      Designed and Developed by <strong>100, 000 000 000</strong>
+    </div>
   </div>
 
   <!-- Add / Edit Modal -->
@@ -347,7 +426,7 @@
       <div class="form-group">
         <label for="alertTone">Alert Tone</label>
         <select id="alertTone">
-          <option value="default">Default Chime</option>
+          <option value="default">Classic Ring</option>
           <option value="soft">Soft Bell</option>
           <option value="bright">Bright Sparkle</option>
           <option value="warm">Warm Melody</option>
@@ -363,6 +442,17 @@
     </div>
   </div>
 
+  <!-- FULL SCREEN 07:00 ALERT -->
+  <div class="alert-overlay" id="alertOverlay">
+    <div class="alert-card">
+      <div class="alert-icon" id="alertIcon">🔔</div>
+      <div class="alert-title" id="alertTitle">Special Day!</div>
+      <div class="alert-subtitle">It's 07:00 — don't forget</div>
+      <div class="alert-events" id="alertEvents"></div>
+      <button class="alert-dismiss" onclick="dismissAlert()">Got it — Stop Ringing</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script>
@@ -375,22 +465,20 @@
     let alertsEnabled = true;
     let morningTimeout = null;
     let audioCtx = null;
-    let swRegistration = null;
+    let ringInterval = null;
+    let isRinging = false;
 
     // ===================== INIT =====================
-    document.addEventListener('DOMContentLoaded', async () => {
+    document.addEventListener('DOMContentLoaded', () => {
       loadEvents();
       loadSettings();
       renderCalendar();
       renderUpcoming();
-      await registerServiceWorker();
       checkNotificationPermission();
       updateStatusLine();
-      // Main scheduling logic
       checkAndNotifyToday();
       scheduleNextMorningAlert();
 
-      // Re-check when user comes back to the tab
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
           checkAndNotifyToday();
@@ -398,22 +486,11 @@
         }
       });
 
-      // Also check every 30 seconds while the page is open
+      // Check every 20 seconds while page is open
       setInterval(() => {
         checkAndNotifyToday();
-      }, 30000);
+      }, 20000);
     });
-
-    // ===================== SERVICE WORKER =====================
-    async function registerServiceWorker() {
-      if (!('serviceWorker' in navigator)) return;
-      try {
-        swRegistration = await navigator.serviceWorker.register('./sw.js');
-        console.log('Service Worker registered');
-      } catch (err) {
-        console.warn('SW registration failed:', err);
-      }
-    }
 
     // ===================== STORAGE =====================
     function loadEvents() {
@@ -442,6 +519,7 @@
         showToast('Morning alerts enabled');
       } else {
         if (morningTimeout) clearTimeout(morningTimeout);
+        stopRinging();
         showToast('Morning alerts disabled');
       }
       updateStatusLine();
@@ -666,7 +744,6 @@
       renderCalendar();
       renderUpcoming();
       if (selectedDay) showDayDetail(selectedDay.day, selectedDay.month, selectedDay.year);
-      // Re-schedule in case the new event is today
       checkAndNotifyToday();
       scheduleNextMorningAlert();
     }
@@ -696,7 +773,7 @@
       showToast('Event deleted');
     }
 
-    // ===================== NOTIFICATIONS & ALARM =====================
+    // ===================== NOTIFICATIONS & 07:00 ALERT =====================
     function checkNotificationPermission() {
       if (!('Notification' in window)) {
         updateStatusLine();
@@ -719,12 +796,11 @@
         document.getElementById('notifBanner').style.display = 'none';
         if (perm === 'granted') {
           showToast('Notifications enabled 🔔');
-          // Unlock audio on this user gesture
           ensureAudioContext();
           checkAndNotifyToday();
           scheduleNextMorningAlert();
         } else {
-          showToast('Permission denied – alerts will only play sound when app is open');
+          showToast('Permission denied – on-screen alert + sound will still work when app is open');
         }
         updateStatusLine();
       });
@@ -736,18 +812,11 @@
         el.innerHTML = 'Morning alerts are <strong style="color:var(--danger)">OFF</strong>';
         return;
       }
-      const perm = ('Notification' in window) ? Notification.permission : 'unsupported';
-      if (perm === 'granted') {
-        const next = getNext7AM();
-        const mins = Math.round((next - new Date()) / 60000);
-        const h = Math.floor(mins / 60);
-        const m = mins % 60;
-        el.innerHTML = `✅ Alerts ON · Next check at <strong>07:00</strong> (in ${h}h ${m}m)`;
-      } else if (perm === 'denied') {
-        el.innerHTML = '⚠️ Notification permission denied · Sound will still play if app is open';
-      } else {
-        el.innerHTML = '👆 Tap <strong>Enable</strong> above to allow notifications';
-      }
+      const next = getNext7AM();
+      const mins = Math.round((next - new Date()) / 60000);
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      el.innerHTML = `✅ Alerts ON · Next check at <strong>07:00</strong> (in ${h}h ${m}m)`;
     }
 
     function getTodayEvents() {
@@ -763,7 +832,6 @@
       return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
     }
 
-    // Called frequently – decides whether to fire today's alerts
     function checkAndNotifyToday() {
       if (!alertsEnabled) return;
 
@@ -774,23 +842,23 @@
       const todayKey = getTodayKey();
       const lastNotified = getLastNotifiedDate();
 
-      // Already notified today?
       if (lastNotified === todayKey) return;
-
-      // Only fire at or after 07:00
       if (now.getHours() < 7) return;
 
-      // Fire!
-      fireAlerts(todayEvents);
+      // Fire the big on-screen alert + ring
+      showOnScreenAlert(todayEvents);
       setLastNotifiedDate(todayKey);
+
+      // Also try browser notification
+      if (Notification.permission === 'granted') {
+        todayEvents.forEach(e => showBrowserNotification(e));
+      }
     }
 
     function getNext7AM() {
       const now = new Date();
       const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 7, 0, 0, 0);
-      if (next <= now) {
-        next.setDate(next.getDate() + 1);
-      }
+      if (next <= now) next.setDate(next.getDate() + 1);
       return next;
     }
 
@@ -802,53 +870,65 @@
       const delay = next - new Date();
 
       morningTimeout = setTimeout(() => {
-        // At exactly ~07:00
         checkAndNotifyToday();
-        // Schedule the day after
         scheduleNextMorningAlert();
       }, delay);
 
       updateStatusLine();
-      console.log('Next morning alert scheduled in', Math.round(delay / 60000), 'minutes');
     }
 
-    function fireAlerts(eventList) {
-      eventList.forEach((e, index) => {
-        // Stagger slightly so multiple notifications don't collide
-        setTimeout(() => {
-          showNotification(e);
-          playTone(e.tone || 'default');
-        }, index * 800);
-      });
+    // ===== ON-SCREEN ALERT + RINGING =====
+    function showOnScreenAlert(eventList) {
+      const overlay = document.getElementById('alertOverlay');
+      const eventsBox = document.getElementById('alertEvents');
+      const iconEl = document.getElementById('alertIcon');
+      const titleEl = document.getElementById('alertTitle');
+
+      const hasBirthday = eventList.some(e => e.type === 'birthday');
+      const hasAnniv = eventList.some(e => e.type === 'anniversary');
+
+      if (hasBirthday && hasAnniv) {
+        iconEl.textContent = '🎉';
+        titleEl.textContent = 'Special Day!';
+      } else if (hasBirthday) {
+        iconEl.textContent = '🎂';
+        titleEl.textContent = 'Birthday Today!';
+      } else {
+        iconEl.textContent = '💍';
+        titleEl.textContent = 'Anniversary Today!';
+      }
+
+      eventsBox.innerHTML = eventList.map(e => `
+        <div class="alert-event-item">
+          <div class="ae-name">${escapeHtml(e.name)}</div>
+          <div class="ae-type">${e.type === 'birthday' ? '🎂 Birthday' : '💍 Anniversary'}</div>
+          ${e.note ? `<div class="ae-note">${escapeHtml(e.note)}</div>` : ''}
+        </div>
+      `).join('');
+
+      overlay.classList.add('show');
+      startRinging(eventList[0]?.tone || 'default');
     }
 
-    function showNotification(event) {
+    function dismissAlert() {
+      document.getElementById('alertOverlay').classList.remove('show');
+      stopRinging();
+    }
+
+    function showBrowserNotification(event) {
       const title = event.type === 'birthday' ? '🎂 Birthday Today!' : '💍 Anniversary Today!';
       const body = `${event.name}${event.note ? ' – ' + event.note : ''}`;
-      const icon = event.type === 'birthday'
-        ? "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎂</text></svg>"
-        : "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💍</text></svg>";
-
-      // Prefer Service Worker notification (works better in background)
-      if (swRegistration && swRegistration.active && Notification.permission === 'granted') {
-        swRegistration.active.postMessage({
-          type: 'SHOW_NOTIFICATION',
-          title, body, tag: 'abc-' + event.id, icon
+      try {
+        const n = new Notification(title, {
+          body,
+          tag: 'abc-' + event.id,
+          requireInteraction: true
         });
-      } else if (Notification.permission === 'granted') {
-        // Fallback to regular Notification
-        try {
-          const n = new Notification(title, {
-            body, icon, tag: 'abc-' + event.id, requireInteraction: true
-          });
-          n.onclick = () => { window.focus(); n.close(); };
-        } catch (err) {
-          console.warn('Notification failed', err);
-        }
-      }
+        n.onclick = () => { window.focus(); n.close(); };
+      } catch (e) {}
     }
 
-    // ===================== SOUND =====================
+    // ===================== RINGING SOUND (looping) =====================
     function ensureAudioContext() {
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -859,66 +939,76 @@
       return audioCtx;
     }
 
-    function playTone(type) {
+    function playRingBurst(type) {
       try {
         const ctx = ensureAudioContext();
         const now = ctx.currentTime;
 
-        const notes = {
-          default: [523.25, 659.25, 783.99],
-          soft:    [392.00, 493.88, 587.33],
-          bright:  [659.25, 830.61, 1046.50],
-          warm:    [349.23, 440.00, 523.25]
+        // Phone-like double-ring patterns
+        const patterns = {
+          default: { freqs: [880, 1100], gap: 0.12, duration: 0.18 },
+          soft:    { freqs: [523, 659],  gap: 0.15, duration: 0.22 },
+          bright:  { freqs: [987, 1318], gap: 0.10, duration: 0.15 },
+          warm:    { freqs: [440, 554],  gap: 0.14, duration: 0.20 }
         };
-        const freqs = notes[type] || notes.default;
+        const p = patterns[type] || patterns.default;
 
-        freqs.forEach((freq, i) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.type = 'sine';
-          osc.frequency.value = freq;
-          gain.gain.setValueAtTime(0, now + i * 0.18);
-          gain.gain.linearRampToValueAtTime(0.28, now + i * 0.18 + 0.05);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.18 + 0.45);
-          osc.start(now + i * 0.18);
-          osc.stop(now + i * 0.18 + 0.5);
+        // Two short bursts (classic ring-ring)
+        [0, 0.35].forEach(offset => {
+          p.freqs.forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            const start = now + offset + i * p.gap;
+            gain.gain.setValueAtTime(0, start);
+            gain.gain.linearRampToValueAtTime(0.32, start + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, start + p.duration);
+            osc.start(start);
+            osc.stop(start + p.duration + 0.02);
+          });
         });
       } catch (e) {
-        console.warn('Audio play failed', e);
+        console.warn('Ring failed', e);
       }
     }
 
-    // ===================== TEST BUTTON =====================
-    function testAlert() {
-      // Unlock audio on this click
+    function startRinging(type) {
+      stopRinging();
+      isRinging = true;
       ensureAudioContext();
+      // Play immediately, then every 1.8 seconds
+      playRingBurst(type);
+      ringInterval = setInterval(() => {
+        if (isRinging) playRingBurst(type);
+      }, 1800);
+    }
 
-      const sample = {
+    function stopRinging() {
+      isRinging = false;
+      if (ringInterval) {
+        clearInterval(ringInterval);
+        ringInterval = null;
+      }
+    }
+
+    // ===================== TEST =====================
+    function testAlert() {
+      ensureAudioContext();
+      const sample = [{
         id: 'test',
         name: 'Test Person',
         type: 'birthday',
-        tone: document.getElementById('alertTone') ? document.getElementById('alertTone').value : 'default',
-        note: 'This is a test alert'
-      };
-
+        tone: 'default',
+        note: 'This is a test of the 07:00 alert'
+      }];
+      showOnScreenAlert(sample);
       if (Notification.permission === 'granted') {
-        showNotification(sample);
-        playTone(sample.tone);
-        showToast('Test notification + sound sent 🔔');
-      } else if (Notification.permission === 'default') {
-        requestNotificationPermission().then?.(() => {
-          // after permission the test can be run again
-        });
-        // Still play sound
-        playTone(sample.tone);
-        showToast('Sound played · Please allow notifications and test again');
-      } else {
-        // Permission denied – still play the alarm sound
-        playTone(sample.tone);
-        showToast('Sound played (notifications blocked by browser)');
+        showBrowserNotification(sample[0]);
       }
+      showToast('On-screen alert + ring started');
     }
 
     // ===================== TOAST =====================
@@ -929,7 +1019,6 @@
       setTimeout(() => t.classList.remove('show'), 2800);
     }
 
-    // Close modal on overlay click
     document.getElementById('modalOverlay').addEventListener('click', (e) => {
       if (e.target === e.currentTarget) closeModal();
     });
